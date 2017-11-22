@@ -358,7 +358,7 @@ Directory of C:\Users\Administrator\Desktop
  1 File(s) 32 bytes
  2 Dir(s) 31.039.451.136 bytes free
 ```
-and we Got The Root Flag!
-<a href="https://imgflip.com/gif/1zsvje"><img src="https://i.imgflip.com/1zsvje.gif" title="made at imgflip.com"/></a>
+and we **Got The Root Flag!**
+<a href="https://imgflip.com/gif/1zsvkv"><img src="https://i.imgflip.com/1zsvkv.gif" title="made at imgflip.com"/></a>
 
 Overall I really enjoyed this box it was simple and fun box. I’m happy to announce that this my very first writeup I’ve ever done.
