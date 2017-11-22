@@ -359,5 +359,7 @@ Directory of C:\Users\Administrator\Desktop
  2 Dir(s) 31.039.451.136 bytes free
 ```
 and we Got The Root Flag!
+
 ![](https://gph.is/2alsxtt)
-I really enjoyed this box but in some parts I was struggling that’s why I had to use b374k’s shell if someone else did it differently I would love to hear how you achieved to upload a file to the victim machine. I’m happy to announce that this my very first writeup I’ve ever done.
+
+Overall I really enjoyed this box it was simple and fun box. I’m happy to announce that this my very first writeup I’ve ever done.
