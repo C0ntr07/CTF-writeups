@@ -51,7 +51,7 @@ Now 10.10.10.29 resolves to bank.htb. I tried to do a zone transfer with dig but
 ```
 I then used DirBuster to find new files and directory in bank.htb. Most of the files and folders were 403,302 some were 200 I found and interesting file named support and it was 200, so I tried accessing it but were being redirected to /login.php once again. I installed this plugin on firefox called noredirect which allows to me stop any 302 redirections. For those who couldn’t get Noredirect installed on firefox because of the firefox version was outdated there was an option to install anyway at the bottom of the page. I noticed people were having trouble with that, Alternatively could’ve used either Burpsuite or Zap-Proxy to catch the request and send it through as a 200 request.
 
-![ScreenShot](https://raw.github.com/{laykatz}/{CTF-writeups}/{Bank-HackTheBox}/{image.png})
+![](https://raw.github.com/laykatz/CTF-writeups/Bank-HackTheBox/image.png)
 
 I added http://bank.htb/login.php to the noredirect plugin so it would stop redirecting to /login.php everytime. Now I’m able to access http://bank.htb/ and we can see the transactions at the bank, and some other information… If we now go to /support.php we can see you can upload “tickets” as images, if you curl http://bank.htb/support.php and scroll through the html code you can see that the admin left him self a little nice note for himself.
 
