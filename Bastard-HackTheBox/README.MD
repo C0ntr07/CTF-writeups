@@ -360,6 +360,6 @@ Directory of C:\Users\Administrator\Desktop
 ```
 and we Got The Root Flag!
 
-![](https://gph.is/2alsxtt)
+https://giphy.com/gifs/13L1hdaUL0UrpC/html5
 
 Overall I really enjoyed this box it was simple and fun box. I’m happy to announce that this my very first writeup I’ve ever done.
