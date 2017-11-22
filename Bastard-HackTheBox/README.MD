@@ -360,6 +360,6 @@ Directory of C:\Users\Administrator\Desktop
 ```
 and we Got The Root Flag!
 
-https://giphy.com/gifs/13L1hdaUL0UrpC/html5
+<iframe src="https://giphy.com/embed/13L1hdaUL0UrpC" width="480" height="270" frameBorder="0" class="giphy-embed" allowFullScreen></iframe><p><a href="https://giphy.com/gifs/capture-13L1hdaUL0UrpC">via GIPHY</a></p>
 
 Overall I really enjoyed this box it was simple and fun box. I’m happy to announce that this my very first writeup I’ve ever done.
