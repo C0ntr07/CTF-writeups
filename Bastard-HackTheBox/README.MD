@@ -179,7 +179,8 @@ user.json
  “type”: “rel” }
  },
  “pass”: “$S$DRYKUR0xDeqClnV5W0dnncafeE.Wi4YytNcBmmCtwOjrcH5FJSaE”
-}```
+}
+```
 session.json
 ```
 {
